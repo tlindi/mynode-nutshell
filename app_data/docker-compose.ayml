@@ -1,0 +1,28 @@
+version: "3"
+services:
+  mint:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mint
+    ports:
+      - "3338:3338"
+    environment:
+      - MINT_BACKEND_BOLT11_SAT=FakeWallet
+      - MINT_LISTEN_HOST=0.0.0.0
+      - MINT_LISTEN_PORT=3338
+      - MINT_PRIVATE_KEY=TEST_PRIVATE_KEY
+    command: ["poetry", "run", "mint"]
+  wallet:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wallet
+    ports:
+      - "4448:4448"
+    depends_on:
+      - mint
+    environment:
+      - MINT_URL=http://mint:3338
+      - API_HOST=0.0.0.0
+    command: ["poetry", "run", "cashu", "-d"]

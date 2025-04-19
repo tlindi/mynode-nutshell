@@ -1,0 +1,11 @@
+
+# sudo docker -t nutshell build .
+#
+
+#better 
+docker compose
+#more better
+# docker compose up mint
+# docker compose up wallet
+# both
+docker compose up 

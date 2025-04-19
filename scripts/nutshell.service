@@ -1,9 +1,25 @@
-sudo docker run --rm --name nutshell -d \
-    -p 3338:3338 \
-    -v $HOME/nutshell/.env:/app/.env \
-	-e MINT_BACKEND_BOLT11_SAT=FakeWallet \
-    -e MINT_BACKEND_BOLT11_EURO=FakeWallet \
-    -e MINT_LISTEN_HOST=0.0.0.0 \
-    -e MINT_LISTEN_PORT=3338 \
-    -e MINT_PRIVATE_KEY=3f645ef4e245d6293bfe6c912c4ce73e3de7b765ddb3ba36074a9d270084e1ea \
-nutshell poetry run mint
+[Unit]
+Description=Nutshell Mint & Wallet Service  
+Wants=www.service docker_images.service  
+After=www.service docker_images.service  
+
+[Service]  
+WorkingDirectory=/home/user/nutshell  
+
+#ExecStartPre=/usr/bin/is_not_shutting_down.sh  
+#ExecStartPre=/bin/bash -c 'if [ -f /usr/bin/service_scripts/pre_nutshell.sh ]; then /bin/bash /usr/bin/service_scripts/pre_nutshell.sh; fi'  
+
+ExecStart=/usr/bin/docker compose -f /home/tlindi/nutshell/nutshell/docker-compose.yaml up
+ExecStop=/usr/bin/docker compose -f /home/tlindi/nutshell/nutshell/docker-compose.yaml down
+
+#ExecStartPost=/bin/bash -c 'if [ -f /usr/bin/service_scripts/post_nutshell.sh ]; then /bin/bash /usr/bin/service_scripts/post_nutshell.sh; fi'  
+
+Restart=always  
+User=tlindi  
+Type=simple  
+TimeoutSec=120  
+RestartSec=60  
+SyslogIdentifier=nutshell  
+
+[Install]  
+WantedBy=multi-user.target  

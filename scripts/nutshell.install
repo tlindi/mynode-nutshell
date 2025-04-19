@@ -1,11 +1,106 @@
+#!/bin/bash
 
-# sudo docker -t nutshell build .
-#
+source /usr/share/mynode/mynode_device_info.sh
+source /usr/share/mynode/mynode_app_versions.sh
 
-#better 
-docker compose
-#more better
-# docker compose up mint
-# docker compose up wallet
-# both
-docker compose up 
+set -x
+set -e
+
+echo "==================== INSTALLING NUTSHELL ===================="
+
+echo "Installing Nutshell: Chaumian Ecash wallet and mint for Bitcoin"
+echo "Repository: https://github.com/cashubtc/nutshell"
+echo "Version: $NUTSHELL_VERSION"
+echo "============================================================"
+
+# Define installation paths
+NUTSHELL_HOME=~/nutshell/nutshell
+NUTSHELL_DATA=~/nutshell/data
+CASHU_DIR=~/nutshell/cashu
+
+# Define UID & GID dynamically
+NUTSHELL_UID=$(id -u tlindi)
+NUTSHELL_GID=$(id -g tlindi)
+
+# Log user and group settings
+echo "System User & Group Information:"
+echo "* Current User: $(whoami)"
+echo "* User ID (UID): $NUTSHELL_UID"
+echo "* Group ID (GID): $NUTSHELL_GID"
+echo "============================================================"
+
+# Print environment paths before doing anything else
+echo "Installation Paths:"
+echo "* Nutshell Home: $NUTSHELL_HOME"
+echo "* Nutshell Data: $NUTSHELL_DATA"
+echo "* Cashu Directory: $CASHU_DIR"
+echo "============================================================"
+
+# Clone Nutshell repository
+echo "Cloning Nutshell repository"
+if ! git clone https://github.com/cashubtc/nutshell.git "$NUTSHELL_HOME"; then
+    echo "ERROR: Failed to clone Nutshell repository"
+    exit 1
+fi
+echo "Nutshell repository cloned successfully"
+
+cd "$NUTSHELL_HOME"
+
+echo "Checking out Nutshell version $NUTSHELL_VERSION"
+if ! git checkout "$NUTSHELL_VERSION"; then
+    echo "ERROR: Failed to checkout version $NUTSHELL_VERSION"
+    exit 1
+fi
+echo "Checked out version $NUTSHELL_VERSION"
+
+echo "Pulling latest changes with rebase"
+if ! git pull --rebase; then
+    echo "WARNING: Rebase encountered issues, but continuing installation"
+fi
+echo "Repository rebased successfully"
+
+# Ensure Nutshell directory exists before applying permissions
+if [[ -d "$NUTSHELL_HOME" ]]; then
+    echo "Setting ownership: UID=$NUTSHELL_UID GID=$NUTSHELL_GID"
+    chown -R "$NUTSHELL_UID:$NUTSHELL_GID" "$NUTSHELL_HOME" "$NUTSHELL_DATA" "$CASHU_DIR"
+    chmod -R 755 "$NUTSHELL_HOME" "$NUTSHELL_DATA" "$CASHU_DIR"
+    echo "Ownership and permissions set successfully"
+else
+    echo "ERROR: Directory $NUTSHELL_HOME does not exist"
+    exit 1
+fi
+
+# Ensure .env.example exists before copying
+echo "Fetching .env.example"
+if [[ ! -f "$NUTSHELL_HOME/.env.example" ]]; then
+    echo "ERROR: .env.example is missing"
+    exit 1
+fi
+
+# Copy .env.example to the correct path
+echo "Copying .env.example to ~/nutshell/.env"
+cp "$NUTSHELL_HOME/.env.example" ~/nutshell/.env
+echo ".env file successfully copied"
+
+# Modify .env dynamically using environment variables
+declare -A ENV_VARS
+ENV_VARS["CASHU_DIR"]="$CASHU_DIR"
+ENV_VARS["MINT_PRIVATE_KEY"]="$(openssl rand -hex 32)"
+ENV_VARS["MINT_INFO_NAME"]="MyNode Cashu mint"
+
+echo "Modifying .env for MyNodeBTC installation"
+for key in "${!ENV_VARS[@]}"; do
+    value="${ENV_VARS[$key]}"
+    sed -i "s|^$key=.*|$key=\"$value\"|" ~/nutshell/.env
+    echo "* Updated $key to \"$value\""
+done
+
+# Build the Docker image
+echo "Building Nutshell Docker image"
+if ! docker build -t nutshell:latest "$NUTSHELL_HOME"; then
+    echo "ERROR: Failed to build the Nutshell Docker image"
+    exit 1
+fi
+echo "Nutshell Docker image built successfully"
+
+echo "================== DONE INSTALLING NUTSHELL ================="

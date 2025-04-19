@@ -10,7 +10,7 @@ services:
     env_file:
       - .env
     volumes:
-      - mint_data:/app/data
+      - ${MINT_DATABASE_PATH}:/app/database  # Explicit database path for mint
     command: ["poetry", "run", "mint"]
 
   wallet:
@@ -24,10 +24,4 @@ services:
       - mint
     env_file:
       - .env
-    volumes:
-      - wallet_data:/app/data
     command: ["poetry", "run", "cashu", "-d"]
-
-volumes:
-  mint_data:
-  wallet_data:
